@@ -1,6 +1,8 @@
 import express from "express"
 import cors from "cors"
 import { connectDB } from "./config/db.js";
+import path from 'path';
+import fs from 'fs';
 import 'dotenv/config'
 import productRouter from "./routes/productRoutes.js";
 import userRouter from "./routes/userRoutes.js";
@@ -44,6 +46,15 @@ app.use('/api/service', serviceRouter)
 app.get("/",(req,res)=>{
     res.send("api")
 });
+// Đảm bảo thư mục uploads tồn tại
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Phục vụ thư mục uploads như static files
+app.use('/uploads', express.static('uploads'));
+
 app.listen(port,()=>{
     console.log(`server started on http://localhost:${port}`)
 })

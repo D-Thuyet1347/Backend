@@ -1,9 +1,6 @@
 import express from "express";
-import { addProduct, listProduct, removeProduct } from "../controllers/productController.js"; 
+import { addProduct, listProduct, removeProduct, updateProduct } from "../controllers/productController.js"; 
 import multer from "multer";
-import path from "path";
-
-
 
 const productRouter = express.Router();
 
@@ -14,11 +11,10 @@ const storage =multer.diskStorage({ //dis.. tai file len diskStorage()luu tr va 
     }
 })
 const upload=multer({storage:storage})
-
-// productRouter.post("/add", upload.single("ImagePD"), addProduct);
 productRouter.post("/add", upload.single("ImagePD"), addProduct);
-productRouter.post("/update", upload.single("ImagePD"), addProduct);
+productRouter.put("/update", updateProduct);
 productRouter.get('/list', listProduct); 
 productRouter.post("/remove", removeProduct);
+
 
 export default productRouter;

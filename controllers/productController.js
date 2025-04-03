@@ -3,33 +3,18 @@ import fs from 'fs';
 
 // Thêm sản phẩm
 const addProduct = async (req, res) => {
-
-  let image_filename = `${req.file.filename}`; 
-  const product = new ProductModel({
-  ProductName: req.body.ProductName,
-  DescriptionPD: req.body.DescriptionPD,
-  PricePD: req.body.PricePD,
-  StockQuantity: req.body.StockQuantity,
-  Category: req.body.Category,
-  ImagePD: image_filename,
-  });
-
-  try {
-    await product.save();
-    res.json({ success: true, message: 'Product Added' });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error adding product'
-    });
+  try{
+    const newProduct = new ProductModel(req.body);
+    await newProduct.save();
+    res.status(201).json({ success: true, data: newProduct });
+  }catch (error) {
+    res.status(500).json({ success: false, message: 'Error adding product' });
   }
 };
 
-// list sp
 const listProduct = async (req, res) => {
   try {
-    const products = await ProductModel.find({});
+    const products = await ProductModel.find();
     res.json({ success: true, data: products });
   } catch (error) {
     console.log(error);
@@ -51,32 +36,33 @@ const removeProduct = async (req, res) => {
     res.json({ success: false, message: 'Error removing product' });
   }
 };
+// code da chinh sua
 const updateProduct = async (req, res) => {
-  const { id, ProductName, DescriptionPD, PricePD, StockQuantity, Category } = req.body;
-  let image_filename = req.file ? `${req.file.filename}` : null;
-
   try {
-    const product = await ProductModel.findById(id);
-    
-    // Nếu có ảnh mới, xóa ảnh cũ
-    if (image_filename && product.ImagePD !== image_filename) {
-      fs.unlink(`uploads/${product.ImagePD}`, (err) => {
-        if (err) console.log(err);  
-      });
+    const { id, ...updateData } = req.body; // Lấy ID từ body
+    const updatedProduct = await ProductModel.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!updatedProduct) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
     }
-    product.ProductName = ProductName || product.ProductName;
-    product.DescriptionPD = DescriptionPD || product.DescriptionPD;
-    product.PricePD = PricePD || product.PricePD;
-    product.StockQuantity = StockQuantity || product.StockQuantity;
-    product.Category = Category || product.Category;
-    if (image_filename) product.ImagePD = image_filename;
-
-    await product.save();
-    res.json({ success: true, message: 'Product Updated' });
-
+    
+    res.status(200).json({ success: true, data: updatedProduct });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: 'Error updating product' });
+    res.status(500).json({ success: false, message: 'Error updating product' });
   }
 };
-export { addProduct, listProduct, removeProduct ,updateProduct};
+
+const getProductById = async (req, res) => {
+  try {
+    const product = await ProductModel.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, data: product });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: 'Error retrieving product' });
+  }
+};
+export { addProduct, listProduct, removeProduct ,updateProduct, getProductById };

@@ -21,18 +21,7 @@ userRouter.post('/changepassword',authMiddleware, changePassword);
 userRouter.get('/list',listUser)
 userRouter.post('/remove',removeUser)
 userRouter.get('/:id', getUserInfo);
-userRouter.put('/update/:id', authMiddleware, (req, res, next) => {
-    upload(req, res, function (err) {
-        if (err instanceof multer.MulterError) {
-            console.error("Multer Error:", err);
-            return res.status(400).json({ success: false, message: `Lỗi tải ảnh: ${err.message}` });
-        } else if (err) {
-             console.error("Upload Error:", err);
-            return res.status(400).json({ success: false, message: err.message || "Lỗi không xác định khi tải ảnh." });
-        }
-        next();
-    });
-}, updateUser);
+userRouter.put('/update/:id', authMiddleware, upload.single('avatar'), updateUser);
 userRouter.post('/:id/role', updateUserRole);
 
 export default userRouter;
