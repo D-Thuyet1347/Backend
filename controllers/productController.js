@@ -54,15 +54,19 @@ const updateProduct = async (req, res) => {
 };
 
 const getProductById = async (req, res) => {
+  const { productId } = req.params;  // Giả sử bạn nhận productId từ params
+
   try {
-    const product = await ProductModel.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
-    }
-    res.json({ success: true, data: product });
+      const product = await ProductModel.findById(productId);
+      
+      if (!product) {
+          return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
+      }
+
+      res.status(200).json({ success: true, data: product });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: 'Error retrieving product' });
+      console.error('Lỗi khi tìm sản phẩm:', error);
+      res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
   }
 };
 export { addProduct, listProduct, removeProduct ,updateProduct, getProductById };

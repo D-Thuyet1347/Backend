@@ -359,6 +359,41 @@ const getUserInfo = async (req, res) => {
       .json({ success: false, message: "Error retrieving user data" });
   }
 };
+const getCurrentUser = async (req, res) => {
+  try {
+    // Lấy userId từ req.user đã được authMiddleware gắn vào
+    const userId = req.user.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Không xác thực được người dùng" 
+      });
+    }
+
+    const user = await userModel.findById(userId)
+      .select("-password") // Loại bỏ trường password
+      .select("firstName lastName email phone address dateOfBirth image role");
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Không tìm thấy người dùng" 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      data: user 
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin người dùng:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Lỗi server khi lấy thông tin người dùng" 
+    });
+  }
+};
 
 export {
   registerUser,
@@ -371,4 +406,5 @@ export {
   updateUser,
   getUserInfo,
   updateUserRole,
+  getCurrentUser,
 };
