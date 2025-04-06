@@ -4,7 +4,6 @@ import userModel from '../models/userModel.js';
 const authMiddleware = async (req, res, next) => {
     try {
         const token = req.header('Authorization')?.replace('Bearer ', '');
-        console.log("Token received:", token); // Log token
 
         if (!token) {
             return res.status(401).json({ success: false, message: 'Không có token, ủy quyền bị từ chối' });

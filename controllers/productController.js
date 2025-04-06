@@ -54,7 +54,8 @@ const updateProduct = async (req, res) => {
 };
 
 const getProductById = async (req, res) => {
-  const { productId } = req.params;  // Giả sử bạn nhận productId từ params
+  const productId = req.params.id;
+
 
   try {
       const product = await ProductModel.findById(productId);
@@ -63,7 +64,7 @@ const getProductById = async (req, res) => {
           return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
       }
 
-      res.status(200).json({ success: true, data: product });
+      res.status(200).json({ success: true,data: product });
   } catch (error) {
       console.error('Lỗi khi tìm sản phẩm:', error);
       res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
