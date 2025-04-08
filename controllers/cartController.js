@@ -2,8 +2,8 @@ import userModel from "../models/userModel.js";
 
 const addToCart = async (req, res) => {
     try {
-      const { itemId, quantity } = req.body;  // Lấy itemId và quantity từ body
-      const user = await userModel.findById(req.user.id);  // Lấy user từ DB
+      const { itemId, quantity } = req.body; 
+      const user = await userModel.findById(req.user.id); 
       let cartData = user.cartData || {};  // Lấy giỏ hàng của người dùng
   
       // Nếu sản phẩm đã có trong giỏ, tăng số lượng
