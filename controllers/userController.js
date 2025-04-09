@@ -394,7 +394,8 @@ const getCurrentUser = async (req, res) => {
     });
   }
 };
-// API lưu voucher cho người dùng
+
+
 const saveVoucher = async (req, res) => {
   const { voucherId } = req.body;
   const userId = req.user?.id;
@@ -440,7 +441,6 @@ const removeSavedVoucher = async (req, res) => {
     res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi xóa voucher." });
   }
 };
-
 const getSavedVouchers = async (req, res) => {
   const userId = req.user?.id;
 
@@ -468,6 +468,7 @@ const getSavedVouchers = async (req, res) => {
     res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi lấy danh sách voucher.", error: error.message });
   }
 };
+
 
 export {
   registerUser,

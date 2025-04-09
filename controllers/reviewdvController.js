@@ -12,7 +12,6 @@ const addReviewSV = async (req, res) => {
       await newReview.save();
       res.status(201).json({ success: true, message: 'Review added successfully', review: newReview });
     } catch (error) {
-      console.error('Error adding review:', error);
       res.status(500).json({ success: false, message: 'Failed to add review' });
     }
 };
