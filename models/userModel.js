@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
     cartData: { type: Object, default: {} },
     verificationCode: { type: String }, 
     verificationCodeExpires: { type: Date },
+    savedVouchers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Voucher' }]
 }, { minimize: false });
 
 const userModel = mongoose.models.user || mongoose.model('user', userSchema);

@@ -24,11 +24,11 @@ const getAllServices = async (req, res) => {
 const getServiceById = async (req, res) => {
     const { id } = req.params;
     try {
-        const service = await Service.findOne(id);
+        const service = await Service.findById(id);
         if (!service) {
             return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
         }
-        res.status(200).json({ message: 'Lấy dịch vụ thành công', data: service });
+        res.status(200).json({ message: 'Lấy dịch vụ thành công', service });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi load dịch vụ', error: error.message });
     }

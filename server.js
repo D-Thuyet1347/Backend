@@ -39,7 +39,7 @@ app.use('/api/reviewsp', reviewspRouter);
 app.use('/api/reviewdv', reviewdvRouter);
 app.use('/api/branch', branchRoutes);
 app.use('/api/employee', employeeRoutes);
-app.use('/', voucherRoutes);
+app.use('/api/vouchers',voucherRoutes)
 app.use('/api/blog',blog);
 app.use('/api/booking', bookingRouter);
 app.use('/api/service', serviceRouter)

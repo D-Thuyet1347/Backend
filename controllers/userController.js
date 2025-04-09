@@ -394,6 +394,80 @@ const getCurrentUser = async (req, res) => {
     });
   }
 };
+// API lưu voucher cho người dùng
+const saveVoucher = async (req, res) => {
+  const { voucherId } = req.body;
+  const userId = req.user?.id;
+
+  try {
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng." });
+    }
+
+    // Kiểm tra xem voucher đã tồn tại trong danh sách chưa
+    if (user.savedVouchers.includes(voucherId)) {
+      return res.status(400).json({ success: false, message: "Voucher này đã được lưu trước đó." });
+    }
+
+    user.savedVouchers.push(voucherId);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Voucher đã được lưu thành công." });
+  } catch (error) {
+    console.error("Lỗi khi lưu voucher:", error);
+    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi lưu voucher." });
+  }
+};
+
+// API xóa voucher khỏi danh sách đã lưu
+const removeSavedVoucher = async (req, res) => {
+  const { voucherId } = req.body;
+  const userId = req.user?.id;
+
+  try {
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng." });
+    }
+
+    user.savedVouchers = user.savedVouchers.filter((id) => id.toString() !== voucherId);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Voucher đã được xóa khỏi danh sách." });
+  } catch (error) {
+    console.error("Lỗi khi xóa voucher:", error);
+    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi xóa voucher." });
+  }
+};
+
+const getSavedVouchers = async (req, res) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    console.error("Lỗi: Không tìm thấy userId trong request.");
+    return res.status(401).json({ success: false, message: "Yêu cầu không được xác thực." });
+  }
+
+  try {
+    console.log("Đang tìm user với ID:", userId);
+    const user = await userModel.findById(userId);
+    if (!user) {
+      console.warn("Không tìm thấy user với ID:", userId);
+      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng." });
+    }
+
+    console.log("User tìm thấy:", user._id, "Saved Vouchers:", user.savedVouchers);
+    // Populate savedVouchers và kiểm tra lỗi
+    await user.populate('savedVouchers');
+    console.log("Sau khi populate, savedVouchers:", user.savedVouchers);
+
+    res.status(200).json({ success: true, data: user.savedVouchers });
+  } catch (error) {
+    console.error("Lỗi chi tiết khi lấy danh sách voucher:", error);
+    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi lấy danh sách voucher.", error: error.message });
+  }
+};
 
 export {
   registerUser,
@@ -407,4 +481,7 @@ export {
   getUserInfo,
   updateUserRole,
   getCurrentUser,
+  saveVoucher,
+  removeSavedVoucher,
+  getSavedVouchers,
 };

@@ -9,8 +9,14 @@ const voucherSchema = new mongoose.Schema({
   endDate: { type: Date, required: true },
   usageLimit: { type: Number, required: true, min: 1 },
   usageLeft: { type: Number, required: true },
+  applicableTo: { 
+    type: String, 
+    enum: ['products', 'services', 'all'], 
+    default: 'all', 
+    required: true 
+  },
   createdAt: { type: Date, default: Date.now }, // Thêm createdAt giống mẫu của bạn
-});
+}); 
 
 const Voucher = mongoose.model('Voucher', voucherSchema);
 
