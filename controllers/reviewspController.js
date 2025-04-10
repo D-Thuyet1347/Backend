@@ -25,15 +25,19 @@ const getReviewsByProduct = async (req, res) => {
 };
 
 const removeReviewSP = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    try {
-      await ReviewSP.findByIdAndDelete(id);
-      res.status(200).json({ success: true, message: 'Review removed successfully' });
-    } catch (error) {
-      console.error('Error removing review:', error);
-      res.status(500).json({ success: false, message: 'Failed to remove review' });
+  try {
+    const review = await ReviewSP.findById(id);
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá' });
     }
+    await ReviewSP.findByIdAndDelete(id);
+    res.status(200).json({ success: true, message: 'Xóa đánh giá thành công' });
+  } catch (error) {
+    console.error('Lỗi khi xóa đánh giá:', error);
+    res.status(500).json({ success: false, message: 'Xóa đánh giá thất bại' });
+  }
 };
 
 export { addReviewSP, getReviewsByProduct, removeReviewSP };

@@ -20,17 +20,16 @@ const getAllServices = async (req, res) => {
     }
 };
 
-// Get a single service by ID
 const getServiceById = async (req, res) => {
     const { id } = req.params;
     try {
         const service = await Service.findById(id);
         if (!service) {
-            return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
+            return res.status(404).json({ success: false,message: 'Không tìm thấy dịch vụ' });
         }
-        res.status(200).json({ message: 'Lấy dịch vụ thành công', service });
+        res.status(200).json({success: true, message: 'Lấy dịch vụ thành công', data: service });
     } catch (error) {
-        res.status(500).json({ message: 'Lỗi load dịch vụ', error: error.message });
+        res.status(500).json({success: false, message: 'Lỗi load dịch vụ', error: error.message });
     }
 };
 

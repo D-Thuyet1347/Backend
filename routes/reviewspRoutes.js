@@ -1,5 +1,6 @@
 import express from 'express';
 import { addReviewSP, getReviewsByProduct, removeReviewSP } from '../controllers/reviewspController.js';
+import authMiddleware from '../middleware/auth.js';
 
 const reviewRouter = express.Router();
 
