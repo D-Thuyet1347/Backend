@@ -53,22 +53,28 @@ const deleteEmployee = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Find the employee by ID
         const employee = await EmployeeModel.findById(id);
         if (!employee) {
             return res.status(404).json({ message: "Không tìm thấy nhân viên" });
         }
 
+        // Check if the employee is active (if the status is not "active", allow deletion)
         if (employee.Status !== "active") {
+            // Proceed to delete the employee if they are not "active"
             await EmployeeModel.findByIdAndDelete(id);
             return res.status(200).json({ message: "Nhân viên đã được xóa thành công" });
         } else {
+            // Prevent deletion if the employee is currently "active"
             return res.status(400).json({ message: "Không thể xóa nhân viên đang làm việc" });
         }
     } catch (error) {
         console.error("Lỗi khi xóa nhân viên:", error);
-        res.status(500).json({ message: "Lỗi khi xóa nhân viên", error });
+        return res.status(500).json({ message: "Lỗi khi xóa nhân viên", error: error.message });
     }
 };
+
+
 // Lấy danh sách nhân viên
 const getAllEmployees = async (req, res) => {
     try {

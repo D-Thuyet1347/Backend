@@ -143,24 +143,43 @@ const listOrders = async (req, res) => {
 
 // Cập nhật trạng thái đơn hàng và trạng thái thanh toán
 const updateStatus = async (req, res) => {
-    try {
-        const { orderId, status, paymentStatus } = req.body;
+  try {
+      const { orderId, orderStatus } = req.body; // Destructure only needed fields
 
-        if (!orderId || !status || !paymentStatus) {
-            return res.status(400).json({ success: false, message: "Order ID, status, and payment status are required" });
-        }
+      if (!orderId || !orderStatus) {
+          return res.status(400).json({ 
+              success: false, 
+              message: "Order ID and status are required" 
+          });
+      }
 
-        const updatedOrder = await orderModel.findByIdAndUpdate(
-            orderId,
-            { orderStatus: status, paymentStatus: paymentStatus },
-            { new: true }
-        );
-        console.log('Updated order:', updatedOrder);
-        res.json({ success: true, message: "Order status and payment status updated", data: updatedOrder });
-    } catch (error) {
-        console.error('Error in updateStatus:', error);
-        res.status(500).json({ success: false, message: "Server error", error: error.message });
-    }
+      const updatedOrder = await orderModel.findByIdAndUpdate(
+          orderId,
+          { orderStatus }, // Only update orderStatus
+          { new: true, runValidators: true } // Return updated doc and run schema validations
+      );
+
+      if (!updatedOrder) {
+          return res.status(404).json({ 
+              success: false, 
+              message: "Order not found" 
+          });
+      }
+
+      console.log('Successfully updated order status:', updatedOrder);
+      res.json({ 
+          success: true, 
+          message: "Order status updated successfully",
+          data: updatedOrder 
+      });
+  } catch (error) {
+      console.error('Error updating order status:', error);
+      res.status(500).json({ 
+          success: false, 
+          message: "Failed to update order status",
+          error: error.message 
+      });
+  }
 };
 const deleteOrder = async (req, res) => {
   try {

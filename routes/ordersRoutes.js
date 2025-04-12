@@ -7,6 +7,6 @@ orderRoute.post("/place",authMiddleware,placeOrder);
 orderRoute.post("/verify",verifyOrder);
 orderRoute.get("/userorders",authMiddleware,userOrders);
 orderRoute.get("/list",listOrders);
-orderRoute.post("/status",updateStatus);
+orderRoute.put("/status",updateStatus);
 orderRoute.delete("/delete-order", deleteOrder);
 export default orderRoute;

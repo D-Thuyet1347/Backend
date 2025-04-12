@@ -39,7 +39,7 @@ const removeProduct = async (req, res) => {
 // code da chinh sua
 const updateProduct = async (req, res) => {
   try {
-    const { id, ...updateData } = req.body; // Lấy ID từ body
+    const { id, ...updateData } = req.body;
     const updatedProduct = await ProductModel.findByIdAndUpdate(id, updateData, { new: true });
 
     if (!updatedProduct) {

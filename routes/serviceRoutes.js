@@ -14,6 +14,6 @@ const upload=multer({storage:storage})
 serviceRouter.get("/list", getAllServices);
 serviceRouter.get("/:id", getServiceById);
 serviceRouter.post("/add",upload.single("image"), createService);
-serviceRouter.put("/update/:id", updateService);
+serviceRouter.put("/update", updateService);
 serviceRouter.delete("/delete/:id", deleteService);
 export default serviceRouter;

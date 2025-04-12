@@ -37,7 +37,7 @@ const getServiceById = async (req, res) => {
 const updateService = async (req, res) => {
     try {
       const { id, ...updateData } = req.body; 
-      const updatedService = await ServiceModel.findByIdAndUpdate(id, updateData, { new: true });
+      const updatedService = await Service.findByIdAndUpdate(id, updateData, { new: true });
   
       if (!updatedService) {
         return res.status(404).json({ success: false, message: 'Service not found' });
