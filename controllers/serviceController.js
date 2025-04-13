@@ -49,10 +49,6 @@ const updateService = async (req, res) => {
       res.status(500).json({ success: false, message: 'Error updating service' });
     }
   };
-  
- 
-
-// Delete a service
 const deleteService = async (req, res) => {
     try {
         const { id } = req.params;
@@ -68,10 +64,36 @@ const deleteService = async (req, res) => {
         res.status(500).json({ message: 'Xóa dịch vụ thất bại', error: error.message });
     }
 };
+const searchServices = async (req, res) => {
+    const { q, page = 1, limit = 10 } = req.query;
+    try {
+      const query = {
+        $or: [
+          { name: { $regex: q, $options: 'i' } },
+          { description: { $regex: q, $options: 'i' } },
+        ],
+      };
+      const services = await Service.find(query)
+        .limit(limit * 1)
+        .skip((page - 1) * limit);
+      const total = await Service.countDocuments(query);
+      res.json({
+        success: true,
+        data: services,
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+      });
+    } catch (error) {
+      console.error('Error searching services:', error);
+      res.status(500).json({ success: false, message: 'Lỗi khi tìm kiếm dịch vụ' });
+    }
+  };
 export {
     createService,
     getAllServices,
     getServiceById,
     updateService,
-    deleteService
+    deleteService,
+    searchServices
 };

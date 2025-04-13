@@ -44,7 +44,6 @@ app.use('/api/blog',blog);
 app.use('/api/booking', bookingRouter);
 app.use('/api/service', serviceRouter)
 app.use('/api/slide', slideBannerRouter);
-
 app.get("/",(req,res)=>{
     res.send("api")
 });

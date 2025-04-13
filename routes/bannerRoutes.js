@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { getAllSlides, createSlide, deleteSlide } from "../controllers/SlideBanner.js";
+import { getAllSlides, createSlide, deleteSlide, updateSlide } from "../controllers/SlideBanner.js";
 
 const router = express.Router();
 
@@ -15,5 +15,6 @@ const upload = multer({ storage });
 router.get("/", getAllSlides);
 router.post("/add", upload.single("image"), createSlide);
 router.delete("/delete/:id", deleteSlide);
+router.put("/update/:id", updateSlide);
 
 export default router;

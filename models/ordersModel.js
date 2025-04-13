@@ -6,10 +6,10 @@ const orderSchema = new mongoose.Schema(
       items: { type: Array, required: true },
       totalAmount: { type: Number, required: true }, // Thêm trường này
       shippingAddress: { type: Object, required: true },
-      orderStatus: { type: String, default: "Processing" },
+      orderStatus: { type: String, default: "Đang xử lý" },
       orderDate: { type: Date, default: Date.now },
       paymentMethod: { type: String, required: true },
-      paymentStatus: { type: String, default: "Pending" },
+      paymentStatus: { type: String, default: "Đang xử lý" },
       note: { type: String },
     },
     { timestamps: true }

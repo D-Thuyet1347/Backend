@@ -1,32 +1,19 @@
 import orderModel from "../models/ordersModel.js";
 import userModel from "../models/userModel.js";
 import Stripe from "stripe";
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Đặt hàng
-// ordersController.js
+
 const placeOrder = async (req, res) => {
   try {
-    // Kiểm tra user ID
     const userId = req.user?._id;
     if (!userId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Không tìm thấy thông tin người dùng" 
+      return res.status(400).json({
+        success: false,
+        message: "Không tìm thấy thông tin người dùng",
       });
     }
-
-    // Validate dữ liệu đầu vào
     const { items, totalAmount, shippingAddress, paymentMethod, note } = req.body;
-    if (!items || !Array.isArray(items) || items.length === 0 || !totalAmount || !shippingAddress || !paymentMethod) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Vui lòng điền đầy đủ thông tin đơn hàng (items, totalAmount, shippingAddress, paymentMethod)" 
-      });
-    }
-
-    // Kiểm tra từng item trong mảng items
     const formattedItems = items.map(item => {
       if (!item._id || !item.name || !item.price || !item.quantity) {
         throw new Error("Mỗi sản phẩm cần có _id, name, price và quantity");
@@ -34,48 +21,71 @@ const placeOrder = async (req, res) => {
       return {
         productId: item._id,
         name: item.name,
-        price: Number(item.price), // Chuyển sang số để đảm bảo
+        price: Number(item.price),
         quantity: Number(item.quantity),
-        image: item.image || "" // Nếu không có image thì để rỗng
+        image: item.image || "",
       };
     });
-
     // Tạo đơn hàng mới
     const newOrder = new orderModel({
       userId,
       items: formattedItems,
-      totalAmount: Number(totalAmount), // Thêm totalAmount
+      totalAmount: Number(totalAmount),
       shippingAddress,
       paymentMethod,
       paymentStatus: paymentMethod === "card" ? "Pending" : "Cash on Delivery",
       note,
-      orderStatus: "Processing"
+      orderStatus: "Processing",
     });
 
-    // Lưu vào database
+    // Lưu đơn hàng vào database
     const savedOrder = await newOrder.save();
-    console.log('Đã lưu đơn hàng:', savedOrder);
-
+    
     // Xóa giỏ hàng
     await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-    // Xử lý thanh toán nếu là thẻ (giữ nguyên phần comment)
-    if (paymentMethod === "card") {
-      // Xử lý Stripe ở đây nếu cần
+    if (paymentMethod === "Thanh toán khi nhận hàng") {
+      return res.json({
+        success: true,
+        message: "Đặt hàng thành công với COD",
+        orderId: savedOrder._id,
+      });
     }
+    const line_items = [
+      ...formattedItems.map(item => ({
+        price_data: {
+          currency: "vnd",
+          product_data: { name: item.name },
+          unit_amount: item.price * 100, // Chuyển sang VND cent
+        },
+        quantity: item.quantity,
+      })),
+      {
+        price_data: {
+          currency: "vnd",
+          product_data: { name: "Phí vận chuyển" },
+          unit_amount: 30000 * 100, // 30,000 VND
+        },
+        quantity: 1,
+      },
+    ];
 
-    return res.json({
-      success: true,
-      message: "Đặt hàng thành công",
-      orderId: savedOrder._id
+    // Tạo Stripe session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: line_items,
+      mode: "payment",
+      success_url: `${process.env.ClIENT_URL||"http://localhost:3000"}/verify?success=true&orderId=${newOrder._id}`,
+      cancel_url: `${process.env.ClIENT_URL||"http://localhost:3000"}/verify?success=false&orderId=${newOrder._id}`,
     });
-
+    res.json({
+    success: true, session_url: session.url
+    });
   } catch (error) {
-    console.error('Lỗi khi lưu đơn hàng:', error);
-    return res.status(500).json({
+    console.error("Lỗi khi xử lý đơn hàng:", error);
+    res.status(500).json({
       success: false,
-      message: "Lỗi hệ thống khi lưu đơn hàng",
-      error: error.message
+      message: error.message || "Lỗi hệ thống khi xử lý đơn hàng",
     });
   }
 };

@@ -11,12 +11,7 @@ export const getAllSlides = async (req, res) => {
 
 export const createSlide = async (req, res) => {
     try {
-        const newSlide = new slideModel({
-            title: req.body.title,
-            link: req.body.link,
-            isActive: req.body.isActive,
-            image: req.file ? `http://localhost:4000/uploads/${req.file.filename}` : "",
-        });
+        const newSlide = new slideModel(req.body);
         await newSlide.save();
         res.status(201).json({ success: true, data: newSlide });
     } catch (error) {
@@ -31,5 +26,17 @@ export const deleteSlide = async (req, res) => {
         res.json({ success: true, message: "Đã xóa slide" });
     } catch (error) {
         res.status(500).json({ message: "Lỗi xóa slide", error });
+    }
+};
+
+export const updateSlide = async (req, res) => {
+    try {
+        const updateSlide = await slideModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updateSlide) {
+            return res.status(404).json({ message: "Không tìm thấy bài viết để cập nhật" });
+        }
+        res.json({ success: true, data: updateSlide }); // ✅ Phản hồi sau khi cập nhật
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi cập nhật bài viết", error });
     }
 };

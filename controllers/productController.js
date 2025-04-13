@@ -70,4 +70,17 @@ const getProductById = async (req, res) => {
       res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
   }
 };
-export { addProduct, listProduct, removeProduct ,updateProduct, getProductById };
+const searchProduct = async (req, res) => {
+  console.log('Request received with query:', req.query);
+  const { q } = req.query;
+  try {
+    const products = await ProductModel.find({
+      name: { $regex: q, $options: 'i' }
+    });
+    res.json({ success: true, data: products });
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi tìm kiếm sản phẩm' });
+  }
+};
+export { addProduct, listProduct, removeProduct ,updateProduct, getProductById, searchProduct};
