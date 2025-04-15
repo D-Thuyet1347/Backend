@@ -1,6 +1,8 @@
 import EmployeeModel from "../models/employeeModel.js";
 import UserModel from "../models/userModel.js"; 
 import BranchModel from "../models/branchModel.js"; 
+import BookingModel from "../models/bookingModel.js";
+
 
 // Thêm mới nhân viên
 const addEmployee = async (req, res) => {
@@ -96,10 +98,10 @@ const getAllEmployees = async (req, res) => {
                 }
             },
             {
-                $unwind: '$Branch'              // Giải nén mảng chi nhánh
+                $unwind: '$Branch'             
             },
             {
-                $unwind: '$User'                // Giải nén mảng người dùng
+                $unwind: '$User'               
             }
         ]);
 
@@ -109,6 +111,36 @@ const getAllEmployees = async (req, res) => {
         res.status(500).json({ message: "Lỗi khi lấy danh sách nhân viên", error });
     }
 };
+// Thêm hàm này vào employeeController.js
+const getEmployeeBookings = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { date } = req.query;
+      
+      if (!date) {
+        return res.status(400).json({
+          success: false,
+          message: "Thiếu tham số ngày (date)"
+        });
+      }
+  
+      const bookings = await BookingModel.find({
+        employee: id,
+        date: date
+      }).select('time duration');
+  
+      res.json({
+        success: true,
+        data: bookings
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch nhân viên:', error);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi server khi lấy lịch nhân viên"
+      });
+    }
+  };
 
 
-export { addEmployee, updateEmployee, deleteEmployee, getAllEmployees };
+export { addEmployee, updateEmployee, deleteEmployee, getAllEmployees,getEmployeeBookings };

@@ -15,15 +15,11 @@ const placeOrder = async (req, res) => {
     }
     const { items, totalAmount, shippingAddress, paymentMethod, note } = req.body;
     const formattedItems = items.map(item => {
-      if (!item._id || !item.name || !item.price || !item.quantity) {
-        throw new Error("Mỗi sản phẩm cần có _id, name, price và quantity");
-      }
       return {
         productId: item._id,
         name: item.name,
         price: Number(item.price),
         quantity: Number(item.quantity),
-        image: item.image || "",
       };
     });
     // Tạo đơn hàng mới
@@ -55,8 +51,9 @@ const placeOrder = async (req, res) => {
       ...formattedItems.map(item => ({
         price_data: {
           currency: "vnd",
-          product_data: { name: item.name },
-          unit_amount: item.price * 100, // Chuyển sang VND cent
+          product_data: { name: item.name,
+           },
+          unit_amount: item.price, 
         },
         quantity: item.quantity,
       })),
@@ -64,18 +61,16 @@ const placeOrder = async (req, res) => {
         price_data: {
           currency: "vnd",
           product_data: { name: "Phí vận chuyển" },
-          unit_amount: 30000 * 100, // 30,000 VND
+          unit_amount: 30000, // 30,000 VND,
         },
         quantity: 1,
       },
     ];
-
-    // Tạo Stripe session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: line_items,
       mode: "payment",
-      success_url: `${process.env.ClIENT_URL||"http://localhost:3000"}/verify?success=true&orderId=${newOrder._id}`,
+      success_url: `${process.env.ClIENT_URL||"http://localhost:3000"}/verify/success`,
       cancel_url: `${process.env.ClIENT_URL||"http://localhost:3000"}/verify?success=false&orderId=${newOrder._id}`,
     });
     res.json({
@@ -146,10 +141,9 @@ const listOrders = async (req, res) => {
     }
 };
 
-// Cập nhật trạng thái đơn hàng và trạng thái thanh toán
 const updateStatus = async (req, res) => {
   try {
-      const { orderId, orderStatus } = req.body; // Destructure only needed fields
+      const { orderId, orderStatus } = req.body; 
 
       if (!orderId || !orderStatus) {
           return res.status(400).json({ 

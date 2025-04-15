@@ -8,12 +8,12 @@ const bookingSchema = new mongoose.Schema({
   },
   service: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Service", // Tham chiếu đến collection Service
+    ref: "Service", 
     required: true,
   },
   branch: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Branch", // Tham chiếu đến collection Branch
+    ref: "Branch", 
     required: true,
   },
   employee: {
@@ -22,31 +22,31 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
   date: {
-    type: String, // Đổi từ Date thành String để khớp với dữ liệu từ frontend
+    type: String,
     required: true,
   },
   time: {
     type: String,
     required: true,
-    match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, // Định dạng HH:MM (24h)
+    match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
   },
   phone: {
     type: String,
-    required: false, // Bỏ required
+    required: false,
     trim: true,
-    match: /^[0-9]{10,11}$/, // Validation cho số điện thoại VN
+    match: /^[0-9]{10,11}$/,
   },
   email: {
     type: String,
-    required: false, // Bỏ required
+    required: false, 
     trim: true,
     match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Validation email cơ bản
   },
-  status: {type: String, default: "Đang xử lý"},
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+ status: {
+  type: String,
+  enum: ["Đang xử lý", "Đã xác nhận", "Đã huỷ"],
+  default: "Đang xử lý"
+},
   updatedAt: {
     type: Date,
     default: Date.now,

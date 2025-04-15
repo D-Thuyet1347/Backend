@@ -1,24 +1,58 @@
 import BookingModel from "../models/bookingModel.js";
 
-// Create a new booking
+
+
 const createBooking = async (req, res) => {
   try {
-    const { service, branch, employee, date, time, notes } = req.body;
+    console.log('Request body:', req.body);
+    
+    const { service, branch, employee, date, time, duration } = req.body;
+    
+    // Validate required fields
     if (!service || !branch || !employee || !date || !time) {
       return res.status(400).json({
         success: false,
         message: "Thiếu thông tin bắt buộc"
       });
     }
-    const userId = req.user._id;
+
+    // Convert time to minutes for comparison
+    const convertToMinutes = (timeStr) => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const newStart = convertToMinutes(time);
+    const newEnd = newStart + (parseInt(duration) || 60);
+
+    // Check for overlapping bookings
+    const existingBookings = await BookingModel.find({
+      employee,
+      date
+    });
+
+    for (const booking of existingBookings) {
+      const bookingStart = convertToMinutes(booking.time);
+      const bookingEnd = bookingStart + (booking.duration || 60);
+      
+      if (newStart < bookingEnd && newEnd > bookingStart) {
+        return res.status(400).json({
+          success: false,
+          message: `Nhân viên đã có lịch từ ${booking.time} đến ${formatEndTime(booking.time, booking.duration || 60)}`
+        });
+      }
+    }
+
+    // Create new booking
     const newBooking = new BookingModel({
-      user: userId,
+      user: req.user._id,
       service,
       branch,
       employee,
       date,
       time,
-      notes: notes || '',
+      duration: duration || 60,
+      notes: req.body.notes || '',
       status: "Đang xử lý"
     });
 
@@ -39,16 +73,31 @@ const createBooking = async (req, res) => {
   }
 };
 
+function formatEndTime(startTime, duration) {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + duration;
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+}
+
+function calculateEndTime(startTime, duration) {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + (duration || 60);
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+}
 
 const getAllBookings = async (req, res) => {
   try {
     const bookings = await BookingModel.find()
-    .populate("user", "name email")
+    .populate("user", "firstName lastName")
     .populate("service", "name price")
     .populate("branch", "BranchName")
     .populate({
       path: "employee",
-      populate: { path: "UserID", select: "firstName" },
+      populate: { path: "UserID", select: "firstName lastName" },
       
     });
 
@@ -85,7 +134,7 @@ const getBookingUser = async (req, res) => {
     .populate("branch", "BranchName")
     .populate({
       path: "employee",
-      populate: { path: "UserID", select: "firstName" },
+      populate: { path: "UserID", select: "firstName lastName" },
     });
 
     if (!booking) {
@@ -141,40 +190,106 @@ const deleteBooking = async (req, res) => {
 };
 const updateStatus = async (req, res) => {
   try {
-      const { bookingId, bookingStatus } = req.body; // Destructure only needed fields
+    const { bookingId, status } = req.body;
 
-      if (!bookingId || !orderStatus) {
-          return res.status(400).json({ 
-              success: false, 
-              message: "Order ID and status are required" 
-          });
-      }
-
-      const updatedBooking = await BookingModel.findByIdAndUpdate(
-        bookingId,
-          { bookingStatus }, // Only update orderStatus
-          { new: true, runValidators: true } // Return updated doc and run schema validations
-      );
-
-      if (!updatedBooking) {
-          return res.status(404).json({ 
-              success: false, 
-              message: "Order not found" 
-          });
-      }
-      res.json({ 
-          success: true, 
-          message: "Order status updated successfully",
-          data: updatedBooking 
+    if (!bookingId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking ID và trạng thái là bắt buộc",
       });
+    }
+
+    const updatedBooking = await BookingModel.findByIdAndUpdate(
+      bookingId,
+      { status, updatedAt: Date.now() },
+      {
+        new: true,              // Trả về document đã update
+        runValidators: true,    // Chạy validator của schema
+      }
+    );
+
+    if (!updatedBooking) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy booking",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật trạng thái thành công",
+      data: updatedBooking,
+    });
   } catch (error) {
-      console.error('Error updating order status:', error);
-      res.status(500).json({ 
-          success: false, 
-          message: "Failed to update order status",
-          error: error.message 
-      });
+    console.error("Lỗi khi cập nhật trạng thái booking:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ, không thể cập nhật trạng thái booking",
+      error: error.message,
+    });
   }
 };
 
-export { createBooking, getAllBookings, updateBooking, deleteBooking,getBookingUser,getBookingById,updateStatus };
+// Thêm hàm này vào bookingController.js
+const checkEmployeeAvailability = async (req, res) => {
+  try {
+    const { employeeId, date, time, duration } = req.query;
+    
+    if (!employeeId || !date || !time) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu thông tin bắt buộc (employeeId, date, time)"
+      });
+    }
+
+    const bookings = await BookingModel.find({ 
+      employee: employeeId,
+      date: date
+    });
+
+    const requestedStart = convertTimeToMinutes(time);
+    const requestedEnd = requestedStart + (parseInt(duration) || 60); // Mặc định 60 phút nếu không có duration
+    
+    for (const booking of bookings) {
+      const bookingStart = convertTimeToMinutes(booking.time);
+      const bookingEnd = bookingStart + (booking.duration || 60);
+      
+      if (requestedStart < bookingEnd && requestedEnd > bookingStart) {
+        return res.json({
+          available: false,
+          message: `Nhân viên đã có lịch từ ${booking.time} đến ${formatMinutesToTime(bookingEnd)}`
+        });
+      }
+    }
+
+    res.json({ available: true });
+  } catch (error) {
+    console.error('Lỗi khi kiểm tra lịch nhân viên:', error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ khi kiểm tra lịch nhân viên"
+    });
+  }
+};
+
+// Hàm hỗ trợ chuyển đổi thời gian
+function convertTimeToMinutes(timeStr) {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function formatMinutesToTime(minutes) {
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
+
+
+export { createBooking,
+   getAllBookings,
+    updateBooking,
+     deleteBooking,
+     getBookingUser,
+     getBookingById,
+     updateStatus,
+     checkEmployeeAvailability, };
