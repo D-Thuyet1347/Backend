@@ -1,8 +1,9 @@
 import Voucher from '../models/voucherModel.js';
+import User from '../models/userModel.js';
 
 // API thêm voucher mới
 const addVoucher = async (req, res) => {
-  const { code, discount, maximumDiscount, minimumAmount, startDate, endDate, usageLimit } = req.body;
+  const { code, discount, maximumDiscount, minimumAmount, startDate, endDate, usageLimit, applicableTo } = req.body;
 
   try {
     const existingVoucher = await Voucher.findOne({ code });
@@ -19,6 +20,7 @@ const addVoucher = async (req, res) => {
       endDate,
       usageLimit,
       usageLeft: 0,
+      applicableTo,
     });
 
     await newVoucher.save();
@@ -113,5 +115,80 @@ const updateVoucher = async (req, res) => {
   }
 };
 
-export { addVoucher, getVouchers, getVoucherByCode, deleteVoucher, redeemVoucher, updateVoucher };
+// API lấy danh sách voucher của người dùng
+const getUserVouchers = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).populate('vouchers');
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+    }
+    res.status(200).json(user.vouchers);
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách voucher của người dùng:', error);
+    res.status(500).json({ message: 'Đã xảy ra lỗi.' });
+  }
+};
 
+// API thêm voucher vào danh sách của người dùng
+const saveUserVoucher = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { voucherCode } = req.body;
+
+    const voucher = await Voucher.findOne({ code: voucherCode });
+    if (!voucher) {
+      return res.status(404).json({ message: 'Voucher không tồn tại.' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+    }
+
+    if (user.vouchers.includes(voucher._id)) {
+      return res.status(400).json({ message: 'Voucher đã được lưu.' });
+    }
+
+    user.vouchers.push(voucher._id);
+    await user.save();
+
+    res.status(200).json({ message: 'Voucher đã được lưu thành công.' });
+  } catch (error) {
+    console.error('Lỗi khi lưu voucher:', error);
+    res.status(500).json({ message: 'Đã xảy ra lỗi.' });
+  }
+};
+
+// API xóa voucher khỏi danh sách của người dùng
+const removeUserVoucher = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { voucherId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+    }
+
+    user.vouchers = user.vouchers.filter((id) => id.toString() !== voucherId);
+    await user.save();
+
+    res.status(200).json({ message: 'Voucher đã được xóa thành công.' });
+  } catch (error) {
+    console.error('Lỗi khi xóa voucher:', error);
+    res.status(500).json({ message: 'Đã xảy ra lỗi.' });
+  }
+};
+
+export {
+  addVoucher,
+  getVouchers,
+  getVoucherByCode,
+  deleteVoucher,
+  redeemVoucher,
+  updateVoucher,
+  getUserVouchers,
+  saveUserVoucher,
+  removeUserVoucher,
+};

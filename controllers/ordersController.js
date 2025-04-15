@@ -110,8 +110,6 @@ const verifyOrder = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
 };
-
-// Lấy danh sách đơn hàng của người dùng
 const userOrders = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -119,10 +117,7 @@ const userOrders = async (req, res) => {
       return res.status(400).json({ success: false, message: "User ID is missing from req.user" });
     }
 
-    console.log('Fetching orders for userId:', userId.toString());
     const orders = await orderModel.find({ userId });
-    console.log('Orders found:', orders);
-
     // Định dạng lại dữ liệu cho frontend
     const formattedOrders = orders.map(order => ({
       orderId: order._id.toString(),

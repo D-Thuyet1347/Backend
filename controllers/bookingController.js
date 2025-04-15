@@ -1,165 +1,180 @@
-import BookingModel from "../models/bookingModel.js"; // Fixed capitalization
-import ServiceModel from "../models/serviceModel.js"; // Fixed capitalization
-import UserModel from "../models/userModel.js"; // Fixed capitalization
-import BranchModel from "../models/branchModel.js"; // Fixed capitalization
-import EmployeeModel from "../models/employeeModel.js"; // Fixed capitalization
-import Stripe from "stripe";
-import mongoose from "mongoose";
-
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import BookingModel from "../models/bookingModel.js";
 
 // Create a new booking
 const createBooking = async (req, res) => {
-    try {
-        const { userId, serviceId, branchId, employeeId, date, time, notes } = req.body;
-
-        // Validate user
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ message: "ID người dùng không hợp lệ" });
-        }
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            // Validate service
-            if (!mongoose.Types.ObjectId.isValid(serviceId)) {
-                return res.status(400).json({ message: "ID dịch vụ không hợp lệ" });
-            }
-            const service = await ServiceModel.findById(serviceId);
-            if (!service) {
-                // Validate branch
-                if (!mongoose.Types.ObjectId.isValid(branchId)) {
-                    return res.status(400).json({ message: "ID chi nhánh không hợp lệ" });
-                }
-                const branch = await BranchModel.findById(branchId);
-                if (!branch) {
-                    // Validate employee
-                    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
-                        return res.status(400).json({ message: "ID nhân viên không hợp lệ" });
-                    }
-                    const employee = await EmployeeModel.findById(employeeId);
-                    if (!employee) {
-                        return res.status(404).json({ message: "Không tìm thấy nhân viên" });
-                    }
-                    if (!branch) {
-                        return res.status(404).json({ message: "Không tìm thấy chi nhánh" });
-                    }
-                }
-                // Validate employee
-                const employee = await EmployeeModel.findById(employeeId);
-                if (!employee) {
-                    return res.status(404).json({ message: "Không tìm thấy nhân viên" });
-                }
-
-                // Create a payment intent
-                const paymentIntent = await stripe.paymentIntents.create({
-                    amount: service.price * 100, // Assuming price is in VND, converting to smallest unit (stripe uses cents or equivalent)
-                    currency: "vnd",
-                    payment_method_types: ["card"],
-                });
-
-                // Create booking
-                const booking = new BookingModel({
-                    user: userId,
-                    service: serviceId,
-                    branch: branchId,
-                    employee: employeeId,
-                    date,
-                    time,
-                    notes,
-                    paymentIntentId: paymentIntent.id, // Attach payment intent ID
-                });
-
-                await booking.save();
-
-                // Return success response with client secret for frontend payment confirmation
-                res.status(201).json({
-                    message: "Đặt lịch thành công",
-                    booking,
-                    clientSecret: paymentIntent.client_secret,
-                });
-            }
-
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Lỗi máy chủ" });
-
+  try {
+    const { service, branch, employee, date, time, notes } = req.body;
+    if (!service || !branch || !employee || !date || !time) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu thông tin bắt buộc"
+      });
     }
-}
+    const userId = req.user._id;
+    const newBooking = new BookingModel({
+      user: userId,
+      service,
+      branch,
+      employee,
+      date,
+      time,
+      notes: notes || '',
+      status: "Đang xử lý"
+    });
 
+    await newBooking.save();
 
-// Get all bookings
-const getAllBookings = async (req, res) => {
-    try {
-        const bookings = await BookingModel.find()
-            .populate("user")
-            .populate("service");
-            res.json({success:true,data:bookings})
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Lỗi máy chủ" });
-    }
+    res.status(201).json({
+      success: true,
+      message: "Đặt lịch thành công",
+      data: newBooking
+    });
+  } catch (error) {
+    console.error('Lỗi khi tạo booking:', error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ khi tạo booking",
+      error: error.message
+    });
+  }
 };
 
-// Get booking by ID
+
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await BookingModel.find()
+    .populate("user", "name email")
+    .populate("service", "name price")
+    .populate("branch", "BranchName")
+    .populate({
+      path: "employee",
+      populate: { path: "UserID", select: "firstName" },
+      
+    });
+
+    res.json({ success: true, data: bookings });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi máy chủ", error });
+  }
+};
 const getBookingById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const booking = await BookingModel.findById(id)
-            .populate("user")
-            .populate("service");
+  try {
+    const userID= req.user._id;
+    const { employeeId } = req.params;
+    const bookings = await BookingModel.find({ employee: employeeId })
+    .populate("service", "name price")
+    .populate("branch", "BranchName")
+    .populate({
+      path: "employee",
+      populate: { path: "UserID", select: "firstName" },
+    });
 
-        if (!booking) {
-            return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
-        }
+    res.status(200).json({ success: true, data: bookings });
+  } catch (error) {
+    console.error('Lỗi lấy lịch theo nhân viên:', error);
+    res.status(500).json({ message: 'Lỗi server', error });
+  }
+};
 
-        await booking.populate("branch").populate("employee");
-        res.json({success:true,data:booking})
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Lỗi máy chủ" });
+const getBookingUser = async (req, res) => {
+  try {
+    const booking = await BookingModel.find({ user: req.user._id })
+    .populate("user", "name email")
+    .populate("service", "name price")
+    .populate("branch", "BranchName")
+    .populate({
+      path: "employee",
+      populate: { path: "UserID", select: "firstName" },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
     }
+
+    res.json({ success: true, data: booking });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi máy chủ", error });
+  }
 };
 
 // Update booking
 const updateBooking = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { date, time, notes } = req.body;
+  try {
+    const { id } = req.params;
+    const { date, time, notes, status } = req.body;
 
-        const booking = await BookingModel.findByIdAndUpdate(
-            id,
-            { date, time, notes },
-            { new: true }
-        );
+    const booking = await BookingModel.findByIdAndUpdate(
+      id,
+      { date, time, notes, status },
+      { new: true }
+    ).populate("user service branch employee");
 
-        if (!booking) {
-            return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
-        }
-
-        res.status(200).json({ message: "Cập nhật lịch đặt thành công", booking });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Lỗi máy chủ" });
+    if (!booking) {
+      return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
     }
+
+    res.status(200).json({ message: "Cập nhật lịch đặt thành công", success: true, data: booking });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi máy chủ", error });
+  }
 };
 
 // Delete booking
 const deleteBooking = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        const booking = await BookingModel.findByIdAndDelete(id);
+    const booking = await BookingModel.findByIdAndDelete(id);
 
-        if (!booking) {
-            return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
-        }
-
-        res.status(200).json({ message: "Xóa đặt lịch thành công" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Lỗi máy chủ", error });
+    if (!booking) {
+      return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
     }
+
+    res.status(200).json({ message: "Xóa đặt lịch thành công", success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi máy chủ", error });
+  }
+};
+const updateStatus = async (req, res) => {
+  try {
+      const { bookingId, bookingStatus } = req.body; // Destructure only needed fields
+
+      if (!bookingId || !orderStatus) {
+          return res.status(400).json({ 
+              success: false, 
+              message: "Order ID and status are required" 
+          });
+      }
+
+      const updatedBooking = await BookingModel.findByIdAndUpdate(
+        bookingId,
+          { bookingStatus }, // Only update orderStatus
+          { new: true, runValidators: true } // Return updated doc and run schema validations
+      );
+
+      if (!updatedBooking) {
+          return res.status(404).json({ 
+              success: false, 
+              message: "Order not found" 
+          });
+      }
+      res.json({ 
+          success: true, 
+          message: "Order status updated successfully",
+          data: updatedBooking 
+      });
+  } catch (error) {
+      console.error('Error updating order status:', error);
+      res.status(500).json({ 
+          success: false, 
+          message: "Failed to update order status",
+          error: error.message 
+      });
+  }
 };
 
-export { createBooking, getAllBookings, getBookingById, updateBooking, deleteBooking };
+export { createBooking, getAllBookings, updateBooking, deleteBooking,getBookingUser,getBookingById,updateStatus };

@@ -1,11 +1,16 @@
 import express from "express";
-import { createBooking, getAllBookings, getBookingById, updateBooking, deleteBooking } from "../controllers/bookingController.js";
+import { createBooking, getAllBookings, updateBooking, deleteBooking, getBookingUser, updateStatus } from "../controllers/bookingController.js";
+import authMiddleware from "../middleware/auth.js";
+
 const bookingRouter = express.Router();
 
-bookingRouter.get("/", getAllBookings);
-bookingRouter.get("/:id", getBookingById);
-bookingRouter.post("/add", createBooking);
+bookingRouter.get("/list", getAllBookings);
 bookingRouter.put("/update/:id", updateBooking);
 bookingRouter.delete("/delete/:id", deleteBooking);
+bookingRouter.post("/add",authMiddleware, createBooking);
+bookingRouter.get("/bookings/user",authMiddleware, getBookingUser);
+bookingRouter.put("/status",updateStatus);
+
+
 
 export default bookingRouter;
