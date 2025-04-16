@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-
 const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   firstName: { type: String, required: false },
@@ -13,8 +12,9 @@ const userSchema = new mongoose.Schema({
   cartData: { type: Object, default: {} },
   verificationCode: { type: String },
   verificationCodeExpires: { type: Date },
+  isEmailVerified: { type: Boolean, default: false },
   vouchers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Voucher' }], // Thay savedVouchers thành vouchers để đồng bộ
 }, { minimize: false });
 
 const userModel = mongoose.models.user || mongoose.model('User', userSchema);
-export default userModel;   
+export default userModel; 

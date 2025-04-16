@@ -11,6 +11,29 @@ const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
+const sendConfirmationEmail = async (email, verificationCode) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Xác nhận đăng ký tài khoản",
+    html: `
+      <p>Chào bạn,</p>
+      <p>Cảm ơn bạn đã đăng ký tài khoản. Vui lòng nhấp vào nút dưới đây để xác nhận tài khoản của bạn:</p>
+      <a href="http://localhost:4000/api/user/confirm/${verificationCode}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block;">Xác nhận email</a>
+      <p>Chúc bạn một ngày tốt lành!</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
 const registerUser = async (req, res) => {
   const { password, email } = req.body;
   try {
@@ -21,6 +44,7 @@ const registerUser = async (req, res) => {
     if (existingUser) {
       return res.json({ success: false, message: "Email đã tồn tại" });
     }
+
     if (
       !validator.isStrongPassword(password, {
         minLength: 8,
@@ -35,21 +59,23 @@ const registerUser = async (req, res) => {
           "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, số và ký tự đặc biệt",
       });
     }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const newUser = new userModel({
       email,
       password: hashedPassword,
+      verificationCode: generateVerificationCode(), // Lưu mã xác nhận vào cơ sở dữ liệu
+      verificationCodeExpires: Date.now() + 3600000, // Thời gian hết hạn 1 giờ
     });
 
     const user = await newUser.save();
 
-    // Tạo token JWT
-    const token = createToken(user._id);
+    // Gửi email xác nhận
+    await sendConfirmationEmail(email, newUser.verificationCode);
 
     res.json({
       success: true,
-      token,
       message: "Đăng ký thành công! Kiểm tra email để kích hoạt tài khoản.",
     });
   } catch (error) {
@@ -57,6 +83,44 @@ const registerUser = async (req, res) => {
     res.json({ success: false, message: error });
   }
 };
+const confirmEmail = async (req, res) => {
+  const { verificationCode } = req.params;
+
+  try {
+    const user = await userModel.findOne({ verificationCode });
+
+    if (!user) {
+      return res.json({
+        success: false,
+        message: "Mã xác nhận không hợp lệ hoặc đã hết hạn",
+      });
+    }
+
+    // Kiểm tra xem mã xác nhận có hết hạn không
+    if (user.verificationCodeExpires < Date.now()) {
+      return res.json({
+        success: false,
+        message: "Mã xác nhận đã hết hạn",
+      });
+    }
+
+    // Cập nhật trạng thái tài khoản thành đã xác nhận
+    user.verificationCode = null; // Xóa mã xác nhận sau khi sử dụng
+    user.verificationCodeExpires = null; // Xóa thời gian hết hạn
+    user.isEmailVerified = true; // Đánh dấu email đã xác nhận
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Tài khoản của bạn đã được xác nhận thành công!",
+    });
+  } catch (error) {
+    console.error(error);
+    res.json({ success: false, message: "Có lỗi xảy ra. Vui lòng thử lại sau." });
+  }
+};
+
+
 //login
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -68,6 +132,12 @@ const loginUser = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "User doesn't exist" });
+    }
+
+    if (!user.isEmailVerified) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email not verified" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -97,6 +167,7 @@ const loginUser = async (req, res) => {
       .json({ success: false, message: "Internal Server Error" });
   }
 };
+
 // quên  mk
 // Tạo mã xác nhận (OTP)
 const generateVerificationCode = () => {
@@ -144,6 +215,7 @@ const quenmk = async (req, res) => {
     // Tạo mã xác nhận và gửi qua email
     const verificationCode = generateVerificationCode();
     user.verificationCode = verificationCode;
+    user.verificationCodeExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
     await sendVerificationCode(email, verificationCode);
@@ -485,4 +557,5 @@ export {
   saveVoucher,
   removeSavedVoucher,
   getSavedVouchers,
+  confirmEmail 
 };

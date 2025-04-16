@@ -1,5 +1,5 @@
 import express from 'express'
-import {registerUser,loginUser,quenmk,verifyCodeAndResetPassword,changePassword,listUser,removeUser,updateUser,getUserInfo,updateUserRole, getCurrentUser, saveVoucher, removeSavedVoucher, getSavedVouchers} from '../controllers/userController.js'
+import {registerUser,loginUser,quenmk,confirmEmail ,verifyCodeAndResetPassword,changePassword,listUser,removeUser,updateUser,getUserInfo,updateUserRole, getCurrentUser, saveVoucher, removeSavedVoucher, getSavedVouchers} from '../controllers/userController.js'
 import authMiddleware from '../middleware/auth.js'
 import multer from "multer";
 
@@ -20,6 +20,7 @@ userRouter.post('/changepassword', authMiddleware, changePassword)
 userRouter.get('/list', listUser)
 userRouter.post('/remove', removeUser)
 userRouter.get('/:id', getUserInfo)
+userRouter.get("/confirm/:verificationCode", confirmEmail);
 userRouter.put('/update/:id', authMiddleware, upload.single('avatar'), updateUser)
 userRouter.post('/:id/role', updateUserRole)
 userRouter.post('/save-voucher', authMiddleware, saveVoucher);           // Route mới

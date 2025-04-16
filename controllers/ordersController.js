@@ -20,6 +20,7 @@ const placeOrder = async (req, res) => {
         name: item.name,
         price: Number(item.price),
         quantity: Number(item.quantity),
+        image: item.image,
       };
     });
     // Tạo đơn hàng mới
@@ -61,7 +62,7 @@ const placeOrder = async (req, res) => {
         price_data: {
           currency: "vnd",
           product_data: { name: "Phí vận chuyển" },
-          unit_amount: 30000, // 30,000 VND,
+          unit_amount: 30000, 
         },
         quantity: 1,
       },
@@ -112,16 +113,18 @@ const userOrders = async (req, res) => {
       return res.status(400).json({ success: false, message: "User ID is missing from req.user" });
     }
 
+    console.log('Fetching orders for userId:', userId.toString());
     const orders = await orderModel.find({ userId });
+    console.log('Orders found:', orders);
+
     // Định dạng lại dữ liệu cho frontend
     const formattedOrders = orders.map(order => ({
       orderId: order._id.toString(),
-      orderDate: order.orderDate.toLocaleDateString('vi-VN'), // Định dạng ngày
-      products: order.items, // Đổi tên từ items thành products
-      total: order.totalAmount, // Đổi tên từ totalAmount thành total
-      status: order.orderStatus.toLowerCase() // Chuẩn hóa trạng thái
+      orderDate: new Date(order.orderDate).toLocaleDateString('vi-VN'), // ✅ Fix chỗ này
+      products: order.items,
+      total: order.totalAmount,
+      status: order.orderStatus.toLowerCase()
     }));
-
     res.json({ success: true, data: formattedOrders });
   } catch (error) {
     console.error('Error in userOrders:', error);
