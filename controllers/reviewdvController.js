@@ -25,18 +25,12 @@ const getReviewsByService = async (req, res) => {
 
 const removeReviewSV = async (req, res) => {
   const { id } = req.params;
-  const currentUserId = req.user.id;
 
   try {
     const review = await ReviewSV.findById(id);
     if (!review) {
       return res.status(404).json({ success: false, message: "Review not found" });
     }
-
-    if (review.userId.toString() !== currentUserId) {
-      return res.status(403).json({ success: false, message: "Bạn không có quyền xoá đánh giá này" });
-    }
-
     await ReviewSV.findByIdAndDelete(id);
     res.status(200).json({ success: true, message: "Review removed successfully" });
   } catch (error) {

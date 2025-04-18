@@ -120,7 +120,7 @@ const userOrders = async (req, res) => {
     // Định dạng lại dữ liệu cho frontend
     const formattedOrders = orders.map(order => ({
       orderId: order._id.toString(),
-      orderDate: new Date(order.orderDate).toLocaleDateString('vi-VN'), // ✅ Fix chỗ này
+      orderDate: new Date(order.orderDate).toLocaleDateString('vi-VN'),
       products: order.items,
       total: order.totalAmount,
       status: order.orderStatus.toLowerCase()

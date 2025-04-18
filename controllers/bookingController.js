@@ -1,13 +1,49 @@
 import BookingModel from "../models/bookingModel.js";
+import userModel from "../models/userModel.js"; // Thêm import userModel
+import nodemailer from "nodemailer"; // Thêm import nodemailer
 
+// Hàm gửi email xác nhận lịch đặt
+const sendBookingConfirmationEmail = async (userEmail, bookingDetails) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
 
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: userEmail,
+    subject: "Xác nhận đặt lịch thành công",
+    html: `
+      <h2>Xác nhận đặt lịch</h2>
+      <p>Chào bạn,</p>
+      <p>Cảm ơn bạn đã đặt lịch với chúng tôi. Dưới đây là chi tiết lịch đặt của bạn:</p>
+      <ul>
+        <li><strong>Dịch vụ</strong>: ${bookingDetails.service.name}</li>
+        <li><strong>Chi nhánh</strong>: ${bookingDetails.branch.BranchName}</li>
+        <li><strong>Nhân viên</strong>: ${bookingDetails.employee.UserID.firstName} ${bookingDetails.employee.UserID.lastName}</li>
+        <li><strong>Ngày</strong>: ${bookingDetails.date}</li>
+        <li><strong>Giờ</strong>: ${bookingDetails.time}</li>
+        <li><strong>Thời lượng</strong>: ${bookingDetails.duration} phút</li>
+        <li><strong>Ghi chú</strong>: ${bookingDetails.notes || "Không có"}</li>
+        <li><strong>Trạng thái</strong>: ${bookingDetails.status}</li>
+      </ul>
+      <p>Vui lòng kiểm tra thông tin và liên hệ với chúng tôi nếu cần thay đổi.</p>
+      <p>Chúc bạn một ngày tốt lành!</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
 
 const createBooking = async (req, res) => {
   try {
     console.log('Request body:', req.body);
-    
+
     const { service, branch, employee, date, time, duration } = req.body;
-    
+
     // Validate required fields
     if (!service || !branch || !employee || !date || !time) {
       return res.status(400).json({
@@ -34,7 +70,7 @@ const createBooking = async (req, res) => {
     for (const booking of existingBookings) {
       const bookingStart = convertToMinutes(booking.time);
       const bookingEnd = bookingStart + (booking.duration || 60);
-      
+
       if (newStart < bookingEnd && newEnd > bookingStart) {
         return res.status(400).json({
           success: false,
@@ -56,12 +92,29 @@ const createBooking = async (req, res) => {
       status: "Đang xử lý"
     });
 
-    await newBooking.save();
+    // Lưu booking và populate thông tin liên quan
+    const savedBooking = await newBooking.save();
+    const populatedBooking = await BookingModel.findById(savedBooking._id)
+      .populate("user", "email")
+      .populate("service", "name")
+      .populate("branch", "BranchName")
+      .populate({
+        path: "employee",
+        populate: { path: "UserID", select: "firstName lastName" },
+      });
+
+    // Gửi email xác nhận
+    try {
+      await sendBookingConfirmationEmail(populatedBooking.user.email, populatedBooking);
+    } catch (emailError) {
+      console.error('Lỗi khi gửi email xác nhận:', emailError);
+      // Không trả về lỗi cho client, chỉ ghi log vì booking đã thành công
+    }
 
     res.status(201).json({
       success: true,
       message: "Đặt lịch thành công",
-      data: newBooking
+      data: populatedBooking
     });
   } catch (error) {
     console.error('Lỗi khi tạo booking:', error);
@@ -92,14 +145,13 @@ function calculateEndTime(startTime, duration) {
 const getAllBookings = async (req, res) => {
   try {
     const bookings = await BookingModel.find()
-    .populate("user", "firstName lastName")
-    .populate("service", "name price")
-    .populate("branch", "BranchName")
-    .populate({
-      path: "employee",
-      populate: { path: "UserID", select: "firstName lastName" },
-      
-    });
+      .populate("user", "firstName lastName")
+      .populate("service", "name price")
+      .populate("branch", "BranchName")
+      .populate({
+        path: "employee",
+        populate: { path: "UserID", select: "firstName lastName" },
+      });
 
     res.json({ success: true, data: bookings });
   } catch (error) {
@@ -107,17 +159,18 @@ const getAllBookings = async (req, res) => {
     res.status(500).json({ message: "Lỗi máy chủ", error });
   }
 };
+
 const getBookingById = async (req, res) => {
   try {
-    const userID= req.user._id;
+    const userID = req.user._id;
     const { employeeId } = req.params;
     const bookings = await BookingModel.find({ employee: employeeId })
-    .populate("service", "name price")
-    .populate("branch", "BranchName")
-    .populate({
-      path: "employee",
-      populate: { path: "UserID", select: "firstName" },
-    });
+      .populate("service", "name price")
+      .populate("branch", "BranchName")
+      .populate({
+        path: "employee",
+        populate: { path: "UserID", select: "firstName" },
+      });
 
     res.status(200).json({ success: true, data: bookings });
   } catch (error) {
@@ -129,13 +182,13 @@ const getBookingById = async (req, res) => {
 const getBookingUser = async (req, res) => {
   try {
     const booking = await BookingModel.find({ user: req.user._id })
-    .populate("user", "name email")
-    .populate("service", "name price")
-    .populate("branch", "BranchName")
-    .populate({
-      path: "employee",
-      populate: { path: "UserID", select: "firstName lastName" },
-    });
+      .populate("user", "name email")
+      .populate("service", "name price")
+      .populate("branch", "BranchName")
+      .populate({
+        path: "employee",
+        populate: { path: "UserID", select: "firstName lastName" },
+      });
 
     if (!booking) {
       return res.status(404).json({ message: "Không tìm thấy lịch đặt" });
@@ -188,6 +241,7 @@ const deleteBooking = async (req, res) => {
     res.status(500).json({ message: "Lỗi máy chủ", error });
   }
 };
+
 const updateStatus = async (req, res) => {
   try {
     const { bookingId, status } = req.body;
@@ -234,7 +288,7 @@ const updateStatus = async (req, res) => {
 const checkEmployeeAvailability = async (req, res) => {
   try {
     const { employeeId, date, time, duration } = req.query;
-    
+
     if (!employeeId || !date || !time) {
       return res.status(400).json({
         success: false,
@@ -242,18 +296,18 @@ const checkEmployeeAvailability = async (req, res) => {
       });
     }
 
-    const bookings = await BookingModel.find({ 
+    const bookings = await BookingModel.find({
       employee: employeeId,
       date: date
     });
 
     const requestedStart = convertTimeToMinutes(time);
     const requestedEnd = requestedStart + (parseInt(duration) || 60); // Mặc định 60 phút nếu không có duration
-    
+
     for (const booking of bookings) {
       const bookingStart = convertTimeToMinutes(booking.time);
       const bookingEnd = bookingStart + (booking.duration || 60);
-      
+
       if (requestedStart < bookingEnd && requestedEnd > bookingStart) {
         return res.json({
           available: false,
@@ -283,13 +337,14 @@ function formatMinutesToTime(minutes) {
   const mins = minutes % 60;
   return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
+export {
+  createBooking,
+  getAllBookings,
+  updateBooking,
+  deleteBooking,
+  getBookingUser,
+  getBookingById,
+  updateStatus,
+  checkEmployeeAvailability,
+};
 
-
-export { createBooking,
-   getAllBookings,
-    updateBooking,
-     deleteBooking,
-     getBookingUser,
-     getBookingById,
-     updateStatus,
-     checkEmployeeAvailability, };
