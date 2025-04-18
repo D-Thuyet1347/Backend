@@ -383,12 +383,12 @@ const updateUser = async (req, res) => {
 
 const updateUserRole = async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, phone, address, email, dateOfBirth, role } =
+  const {role } =
     req.body;
   try {
     const updatedUser = await userModel.findByIdAndUpdate(
       id,
-      { firstName, lastName, phone, address, email, dateOfBirth, role },
+      { role },
       { new: true }
     );
     if (!updatedUser) {

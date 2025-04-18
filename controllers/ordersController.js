@@ -23,16 +23,15 @@ const placeOrder = async (req, res) => {
         image: item.image,
       };
     });
-    // Tạo đơn hàng mới
     const newOrder = new orderModel({
       userId,
       items: formattedItems,
       totalAmount: Number(totalAmount),
       shippingAddress,
       paymentMethod,
-      paymentStatus: paymentMethod === "card" ? "Pending" : "Cash on Delivery",
+      paymentStatus: paymentMethod === "card" ? "Thanh toán bằng ngân hàng" : "Thanh toán khi nhận hàng",
       note,
-      orderStatus: "Processing",
+      orderStatus: "Đang xử lý",
     });
 
     // Lưu đơn hàng vào database

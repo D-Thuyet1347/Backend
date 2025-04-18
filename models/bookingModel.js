@@ -44,7 +44,6 @@ const bookingSchema = new mongoose.Schema({
   },
  status: {
   type: String,
-  enum: ["Đang xử lý", "Đã xác nhận", "Đã huỷ"],
   default: "Đang xử lý"
 },
   updatedAt: {
